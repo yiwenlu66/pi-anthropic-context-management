@@ -57,7 +57,7 @@ Environment variables:
 | Variable | Default | Meaning |
 | --- | --- | --- |
 | `PI_ANTHROPIC_CONTEXT_PATCH_HEADERS` | `true` | Set provider-level `anthropic-beta` header for Anthropic Messages API-key providers. Disable for OAuth/authHeader/custom-header providers. |
-| `PI_ANTHROPIC_CONTEXT_PROVIDERS` | unset | Comma-separated provider allowlist, e.g. `occ-claude,anthropic`. |
+| `PI_ANTHROPIC_CONTEXT_PROVIDERS` | unset | Comma-separated provider allowlist, e.g. `anthropic,my-anthropic-proxy`. |
 | `PI_ANTHROPIC_CONTEXT_EXCLUDE_PROVIDERS` | unset | Comma-separated provider denylist. |
 | `PI_ANTHROPIC_CONTEXT_DEVICE_ID` | `pi-anthropic-context-management` | Stable `device_id` inside `metadata.user_id`. |
 | `PI_ANTHROPIC_CONTEXT_ACCOUNT_UUID` | empty | `account_uuid` inside `metadata.user_id`. |
