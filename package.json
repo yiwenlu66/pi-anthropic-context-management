@@ -1,0 +1,22 @@
+{
+  "name": "pi-anthropic-context-management",
+  "version": "0.1.0",
+  "description": "Pi extension that adds Anthropic context_management and stable metadata.user_id to Anthropic Messages requests.",
+  "type": "module",
+  "main": "src/index.ts",
+  "files": ["src", "README.md", "LICENSE"],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yiwenlu66/pi-anthropic-context-management.git"
+  },
+  "keywords": ["pi", "pi-extension", "anthropic", "claude", "context-management", "prompt-cache"],
+  "author": "Yiwen Lu",
+  "license": "MIT",
+  "devDependencies": {
+    "@earendil-works/pi-coding-agent": "latest",
+    "typescript": "latest"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  }
+}
