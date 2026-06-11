@@ -9,7 +9,7 @@ It also patches Anthropic Messages providers with the `anthropic-beta` header ne
 
 ## Why
 
-Some Anthropic-compatible routers use `metadata.user_id` as a channel/cache affinity key. Without a stable value, a repeated Pi conversation can keep rewriting the visible prompt suffix instead of reading it from prompt cache.
+Some Anthropic-compatible routers use `metadata.user_id` as a channel/cache affinity key. Without a stable Claude-Code-shaped value, a repeated Pi conversation can keep rewriting the visible prompt suffix instead of reading it from prompt cache.
 
 ## What `clear_thinking_20251015` does
 
@@ -52,6 +52,15 @@ pi -e /path/to/pi-anthropic-context-management/src/index.ts --model <provider>/<
 
 Defaults apply to all Pi models whose resolved `model.api` is `anthropic-messages`.
 
+On first use, the extension creates a local identity file containing a 64-hex `device_id` and UUID `session_id`:
+
+```text
+$PI_CODING_AGENT_DIR/anthropic-context-management.json
+# or ~/.pi/agent/anthropic-context-management.json
+```
+
+The file is local machine state, not intended for git.
+
 Environment variables:
 
 | Variable | Default | Meaning |
@@ -59,12 +68,13 @@ Environment variables:
 | `PI_ANTHROPIC_CONTEXT_PATCH_HEADERS` | `true` | Set provider-level `anthropic-beta` header for Anthropic Messages API-key providers. Disable for OAuth/authHeader/custom-header providers. |
 | `PI_ANTHROPIC_CONTEXT_PROVIDERS` | unset | Comma-separated provider allowlist, e.g. `anthropic,my-anthropic-proxy`. |
 | `PI_ANTHROPIC_CONTEXT_EXCLUDE_PROVIDERS` | unset | Comma-separated provider denylist. |
-| `PI_ANTHROPIC_CONTEXT_DEVICE_ID` | `pi-anthropic-context-management` | Stable `device_id` inside `metadata.user_id`. |
+| `PI_ANTHROPIC_CONTEXT_STATE` | `$PI_CODING_AGENT_DIR/anthropic-context-management.json` | Local identity state path. |
+| `PI_ANTHROPIC_CONTEXT_DEVICE_ID` | generated 64-hex value | Override `device_id` inside `metadata.user_id`. |
 | `PI_ANTHROPIC_CONTEXT_ACCOUNT_UUID` | empty | `account_uuid` inside `metadata.user_id`. |
-| `PI_ANTHROPIC_CONTEXT_SESSION_ID` | `pi-anthropic-context-management` | Stable `session_id` inside `metadata.user_id`. |
+| `PI_ANTHROPIC_CONTEXT_SESSION_ID` | generated UUID | Override `session_id` inside `metadata.user_id`. |
 | `PI_ANTHROPIC_CONTEXT_BETA` | `fine-grained-tool-streaming-2025-05-14,prompt-caching-scope-2026-01-05,context-management-2025-06-27` | Exact `anthropic-beta` value to set when header patching is enabled. |
 
-For New API cache affinity, keep `PI_ANTHROPIC_CONTEXT_SESSION_ID` stable across turns that should share cache routing.
+For New API cache affinity, keep `PI_ANTHROPIC_CONTEXT_SESSION_ID` stable across turns that should share cache routing. If you override `device_id` or `session_id`, use Claude-Code-shaped values: a 64-hex `device_id` and UUID `session_id`.
 
 ## Scope
 

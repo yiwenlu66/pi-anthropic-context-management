@@ -1,3 +1,7 @@
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { homedir, hostname } from "node:os";
+import { dirname, join } from "node:path";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { ExtensionAPI, ExtensionContext } from "@earendil-works/pi-coding-agent";
 
 const CONTEXT_MANAGEMENT_BETA = "context-management-2025-06-27";
@@ -7,10 +11,14 @@ const DEFAULT_BETA_TOKENS = [
   CONTEXT_MANAGEMENT_BETA,
 ];
 
-const DEFAULT_DEVICE_ID = "pi-anthropic-context-management";
-const DEFAULT_SESSION_ID = "pi-anthropic-context-management";
-
 type JsonRecord = Record<string, unknown>;
+
+interface LocalIdentity {
+  device_id: string;
+  session_id: string;
+}
+
+let cachedIdentity: LocalIdentity | undefined;
 
 function env(name: string): string | undefined {
   const value = process.env[name];
@@ -34,6 +42,77 @@ function isRecord(value: unknown): value is JsonRecord {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isHex64(value: unknown): value is string {
+  return typeof value === "string" && /^[0-9a-f]{64}$/i.test(value);
+}
+
+function isUuid(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+  );
+}
+
+function fallbackIdentity(): LocalIdentity {
+  const seed = `${hostname()}\n${homedir()}\npi-anthropic-context-management`;
+  const digest = createHash("sha256").update(seed).digest("hex");
+  const uuidHex = createHash("sha256").update(`session\n${seed}`).digest("hex");
+  return {
+    device_id: digest,
+    session_id: `${uuidHex.slice(0, 8)}-${uuidHex.slice(8, 12)}-4${uuidHex.slice(13, 16)}-8${uuidHex.slice(17, 20)}-${uuidHex.slice(20, 32)}`,
+  };
+}
+
+function identityStatePath(): string {
+  const explicit = env("PI_ANTHROPIC_CONTEXT_STATE");
+  if (explicit) return explicit;
+  const agentDir = env("PI_CODING_AGENT_DIR") ?? join(homedir(), ".pi", "agent");
+  return join(agentDir, "anthropic-context-management.json");
+}
+
+function readLocalIdentity(path: string): LocalIdentity | undefined {
+  if (!existsSync(path)) return undefined;
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as unknown;
+    if (!isRecord(parsed)) return undefined;
+    if (!isHex64(parsed.device_id) || !isUuid(parsed.session_id)) return undefined;
+    return { device_id: parsed.device_id.toLowerCase(), session_id: parsed.session_id };
+  } catch {
+    return undefined;
+  }
+}
+
+function writeLocalIdentity(path: string, identity: LocalIdentity): void {
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, `${JSON.stringify(identity, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
+}
+
+function localIdentity(): LocalIdentity {
+  if (cachedIdentity) return cachedIdentity;
+
+  const path = identityStatePath();
+  const existing = readLocalIdentity(path);
+  if (existing) {
+    cachedIdentity = existing;
+    return existing;
+  }
+
+  const generated = {
+    device_id: randomBytes(32).toString("hex"),
+    session_id: randomUUID(),
+  };
+
+  try {
+    writeLocalIdentity(path, generated);
+    cachedIdentity = generated;
+    return generated;
+  } catch {
+    const fallback = fallbackIdentity();
+    cachedIdentity = fallback;
+    return fallback;
+  }
+}
+
 function shouldPatchProvider(provider: string | undefined): boolean {
   if (!provider) return false;
   const include = envList("PI_ANTHROPIC_CONTEXT_PROVIDERS");
@@ -48,10 +127,11 @@ function isAnthropicMessagesContext(ctx: ExtensionContext): boolean {
 }
 
 function stableUserId(): string {
+  const identity = localIdentity();
   return JSON.stringify({
-    device_id: env("PI_ANTHROPIC_CONTEXT_DEVICE_ID") ?? DEFAULT_DEVICE_ID,
+    device_id: env("PI_ANTHROPIC_CONTEXT_DEVICE_ID") ?? identity.device_id,
     account_uuid: env("PI_ANTHROPIC_CONTEXT_ACCOUNT_UUID") ?? "",
-    session_id: env("PI_ANTHROPIC_CONTEXT_SESSION_ID") ?? DEFAULT_SESSION_ID,
+    session_id: env("PI_ANTHROPIC_CONTEXT_SESSION_ID") ?? identity.session_id,
   });
 }
 
