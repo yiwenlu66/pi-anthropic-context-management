@@ -81,7 +81,7 @@ function betaHeaderValue(): string {
   return env("PI_ANTHROPIC_CONTEXT_BETA") ?? DEFAULT_BETA_TOKENS.join(",");
 }
 
-function patchProviderHeaders(pi: ExtensionAPI, ctx: ExtensionContext): void {
+async function patchProviderHeaders(pi: ExtensionAPI, ctx: ExtensionContext): Promise<void> {
   if (!envBool("PI_ANTHROPIC_CONTEXT_PATCH_HEADERS", true)) return;
 
   const providers = new Set(
@@ -92,7 +92,14 @@ function patchProviderHeaders(pi: ExtensionAPI, ctx: ExtensionContext): void {
   );
 
   for (const provider of providers) {
+    // Pi's registerProvider({ headers }) replaces the provider request config, including
+    // apiKey. Resolve and re-register the current API key so the header patch does not
+    // silently de-authenticate API-key providers. This is in-memory only.
+    const apiKey = await ctx.modelRegistry.getApiKeyForProvider(provider);
+    if (!apiKey) continue;
+
     pi.registerProvider(provider, {
+      apiKey,
       headers: {
         "anthropic-beta": betaHeaderValue(),
       },
@@ -101,12 +108,12 @@ function patchProviderHeaders(pi: ExtensionAPI, ctx: ExtensionContext): void {
 }
 
 export default function anthropicContextManagement(pi: ExtensionAPI): void {
-  pi.on("session_start", (_event, ctx) => {
-    patchProviderHeaders(pi, ctx);
+  pi.on("session_start", async (_event, ctx) => {
+    await patchProviderHeaders(pi, ctx);
   });
 
-  pi.on("model_select", (_event, ctx) => {
-    patchProviderHeaders(pi, ctx);
+  pi.on("model_select", async (_event, ctx) => {
+    await patchProviderHeaders(pi, ctx);
   });
 
   pi.on("before_provider_request", (event, ctx) => {

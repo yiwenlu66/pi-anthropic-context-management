@@ -31,7 +31,7 @@ Known side effects/risks:
 
 - The request must include the beta token `context-management-2025-06-27`; otherwise Anthropic-compatible upstreams may reject `context_management` as an extra input.
 - `context_management` is a beta API surface. Unsupported providers/models may reject it even with the header.
-- Header patching in Pi is provider-level. This extension sets a provider `headers` map containing `anthropic-beta`; if you depend on other custom provider-level headers, use an include list or disable header patching and configure headers yourself.
+- Header patching in Pi is provider-level. This extension resolves the current API key and re-registers the provider with an `anthropic-beta` header in memory. If you use OAuth, `authHeader`, or additional custom provider-level headers, disable header patching and configure headers yourself.
 - If you change `keep` away from `"all"`, this feature can remove older thinking blocks from request context.
 
 ## Installation
@@ -56,7 +56,7 @@ Environment variables:
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
-| `PI_ANTHROPIC_CONTEXT_PATCH_HEADERS` | `true` | Set provider-level `anthropic-beta` header for Anthropic Messages providers. |
+| `PI_ANTHROPIC_CONTEXT_PATCH_HEADERS` | `true` | Set provider-level `anthropic-beta` header for Anthropic Messages API-key providers. Disable for OAuth/authHeader/custom-header providers. |
 | `PI_ANTHROPIC_CONTEXT_PROVIDERS` | unset | Comma-separated provider allowlist, e.g. `occ-claude,anthropic`. |
 | `PI_ANTHROPIC_CONTEXT_EXCLUDE_PROVIDERS` | unset | Comma-separated provider denylist. |
 | `PI_ANTHROPIC_CONTEXT_DEVICE_ID` | `pi-anthropic-context-management` | Stable `device_id` inside `metadata.user_id`. |
