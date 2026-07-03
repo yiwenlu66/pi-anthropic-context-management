@@ -9,7 +9,7 @@
     "type": "git",
     "url": "git+https://github.com/yiwenlu66/pi-anthropic-context-management.git"
   },
-  "keywords": ["pi", "pi-extension", "anthropic", "claude", "context-management", "prompt-cache"],
+  "keywords": ["pi", "pi-extension", "anthropic", "claude", "context-management", "prompt-cache", "pi-package"],
   "author": "Yiwen Lu",
   "license": "MIT",
   "devDependencies": {
@@ -19,5 +19,10 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
+  },
+  "pi": {
+    "extensions": [
+      "./src/index.ts"
+    ]
   }
 }

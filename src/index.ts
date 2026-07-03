@@ -135,26 +135,43 @@ function stableUserId(): string {
   });
 }
 
+function shouldSendContextManagement(payload: JsonRecord): boolean {
+  const mode = env("PI_ANTHROPIC_CONTEXT_MANAGEMENT");
+  if (mode === "always") return true;
+  if (mode === "never") return false;
+
+  // OCC currently rejects clear_thinking_20251015 when Pi serializes
+  // thinking: { type: "disabled" }. In that state the stable metadata.user_id
+  // is sufficient for cache affinity, so the context-management edit is only
+  // added when thinking is actually enabled.
+  const thinking = payload.thinking;
+  return isRecord(thinking) && thinking.type !== "disabled";
+}
+
 function patchedPayload(payload: unknown): unknown | undefined {
   if (!isRecord(payload)) return undefined;
   if (!Array.isArray(payload.messages)) return undefined;
 
   const metadata = isRecord(payload.metadata) ? payload.metadata : {};
-  const existingContextManagement = isRecord(payload.context_management)
-    ? payload.context_management
-    : {};
-
-  return {
+  const nextPayload: JsonRecord = {
     ...payload,
     metadata: {
       ...metadata,
       user_id: stableUserId(),
     },
-    context_management: {
+  };
+
+  if (shouldSendContextManagement(payload)) {
+    const existingContextManagement = isRecord(payload.context_management)
+      ? payload.context_management
+      : {};
+    nextPayload.context_management = {
       ...existingContextManagement,
       edits: [{ type: "clear_thinking_20251015", keep: "all" }],
-    },
-  };
+    };
+  }
+
+  return nextPayload;
 }
 
 function betaHeaderValue(): string {
